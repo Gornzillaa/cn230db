@@ -1,13 +1,27 @@
-# ชยวัฒน์ กาญจนะแก้ว 6610685122
+"""
+CN230 Project: Data Pipeline and Analysis using SQLite and Public API
+
+This script demonstrates the process of:
+1. Fetching data from a public API (CheapShark API in this case).
+2. Storing the fetched data into a SQLite database.
+3. Performing data analytics on the stored data using SQL queries.
+
+Database Explanation:
+ฐานข้อมูลที่ใช้ในโปรเจกต์นี้คือ SQLite ซึ่งเป็นระบบจัดการฐานข้อมูลแบบไฟล์ (file-based database)
+ข้อมูลที่ดึงมาจาก CheapShark API จะถูกจัดเก็บไว้ในตารางชื่อ 'deals'
+แต่ละแถวในตาราง 'deals' แทนข้อมูลดีลเกม 1 รายการ โดยมีคอลัมน์ต่างๆ เช่น ชื่อเกม ราคา คะแนนรีวิว และส่วนลด
+เราจะใช้คำสั่ง SQL เพื่อสอบถามและวิเคราะห์ข้อมูลในตารางนี้ เช่น หาดีลที่มีส่วนลดสูงสุด หรือดีลที่มีคะแนนรีวิวดี
+
+Author: [ชยวัฒน์ กาญจนะแก้ว 6610685122]
+"""
+
 import sqlite3
 import requests
 import json
-import datetime # อาจจะใช้ถ้าต้องการแปลง timestamp เป็นวันที่
+import datetime # แปลง timestamp เป็นวันที่
 
 # --- กำหนดค่าคงที่ ---
 DATABASE_NAME = "cheapshark_deals.db"
-# URL ของ API ที่คุณเลือก
-# storeID=1 คือ Steam, upperPrice=15 คือ ดีลที่มีราคาสูงสุดไม่เกิน 15 USD
 API_URL = "https://www.cheapshark.com/api/1.0/deals?storeID=1&upperPrice=15"
 
 # --- ฟังก์ชันสำหรับดึงข้อมูลจาก API ---
@@ -143,9 +157,61 @@ def insert_deals_data(conn, deals_list):
         conn.rollback()
         return 0
 
-# --- ฟังก์ชันสำหรับ Data Analytics ด้วย SQL ---
+# --- Helper function สำหรับแสดงผลเป็นตาราง ---
+def print_table(headers, data, col_widths=None):
+    """
+    แสดงข้อมูลในรูปแบบตาราง
+
+    headers: List ของชื่อคอลัมน์ (strings)
+    data: List ของ Tuple หรือ List ของ List (แต่ละ Tuple/List คือ 1 แถวข้อมูล)
+    col_widths: Optional List ของความกว้างที่ต้องการสำหรับแต่ละคอลัมน์
+    """
+    if not headers:
+        print("No headers provided.")
+        return
+    if not data:
+        print("No data to display.")
+        return
+
+    # คำนวณความกว้างของแต่ละคอลัมน์ ถ้าไม่ได้กำหนดมา
+    if col_widths is None:
+        col_widths = [len(h) for h in headers]
+        for row in data:
+            for i, item in enumerate(row):
+                # แปลงข้อมูลเป็น string ก่อนวัดความยาว
+                item_str = str(item) if item is not None else "NULL"
+                if i < len(col_widths): # ตรวจสอบขอบเขต
+                    col_widths[i] = max(col_widths[i], len(item_str))
+                else: # กรณีมีคอลัมน์ในข้อมูลมากกว่าใน headers (ไม่ควรเกิดขึ้นถ้า query ถูกต้อง)
+                    col_widths.append(len(item_str))
+
+    # ปรับความกว้างขั้นต่ำ (เผื่อกรณีข้อมูลสั้นมาก)
+    min_width = 5
+    col_widths = [max(w, min_width) for w in col_widths]
+
+    # สร้างรูปแบบสำหรับแต่ละแถว
+    format_string = " | ".join([f"{{:<{w}}}" for w in col_widths]) # {:<w} คือ จัดชิดซ้าย กว้าง w
+
+    # แสดง Header
+    print("-" * (sum(col_widths) + (len(col_widths) - 1) * 3 + 2)) # เส้นคั่นด้านบน
+    print(format_string.format(*headers))
+    print("-" * (sum(col_widths) + (len(col_widths) - 1) * 3 + 2)) # เส้นคั่นระหว่าง Header กับ Data
+
+    # แสดง Data
+    for row in data:
+        # แปลงข้อมูลในแถวเป็น string และจัดการค่า None
+        formatted_row = [str(item) if item is not None else "NULL" for item in row]
+        # ตัดข้อความที่ยาวเกินความกว้างคอลัมน์ (ป้องกันตารางเบี้ยว)
+        truncated_row = [item[:col_widths[i]] if i < len(col_widths) else item for i, item in enumerate(formatted_row)]
+        print(format_string.format(*truncated_row))
+
+    print("-" * (sum(col_widths) + (len(col_widths) - 1) * 3 + 2)) # เส้นคั่นด้านล่าง
+    print("\n") # บรรทัดว่างหลังตาราง
+
+
+# --- ฟังก์ชันสำหรับทำ Data Analytics ด้วย SQL (ปรับปรุงการแสดงผล) ---
 def analyze_deals_data(conn):
-    """วิเคราะห์ข้อมูลดีลเกมในฐานข้อมูลด้วย SQL"""
+    """วิเคราะห์ข้อมูลดีลเกมในฐานข้อมูลด้วย SQL และแสดงผลเป็นตาราง"""
     if not conn:
         print("Cannot analyze data: No connection.")
         return
@@ -154,48 +220,167 @@ def analyze_deals_data(conn):
     print("\n--- Data Analysis Results ---")
 
     try:
-        # 1: นับจำนวนดีลทั้งหมด
+        # ตัวอย่าง 1: นับจำนวนดีลทั้งหมด
+        print("1. Total number of deals stored:")
         cursor.execute("SELECT COUNT(*) FROM deals")
-        total_deals = cursor.fetchone()[0]
-        print(f"1. Total number of deals stored: {total_deals}")
+        total_deals = cursor.fetchone() # fetchone() คืนค่าเป็น Tuple
+        print_table(["Total Deals"], [total_deals]) # ใส่ผลลัพธ์ใน List ของ List/Tuple
 
-        # 2: แสดงดีล 5 อันดับแรกที่มีส่วนลด (savings) สูงสุด
-        print("\n2. Top 5 deals with highest savings:")
+        # ตัวอย่าง 2: แสดงดีล 5 อันดับแรกที่มีส่วนลด (savings) สูงสุด
+        print("2. Top 5 deals with highest savings:")
         cursor.execute("SELECT title, savings, salePrice, normalPrice FROM deals ORDER BY savings DESC LIMIT 5")
         top_savings_deals = cursor.fetchall()
-        for i, (title, savings, salePrice, normalPrice) in enumerate(top_savings_deals):
-            print(f"   - Rank {i+1}: {title} - Savings: {savings:.2f}%, Price: ${salePrice:.2f} (Normal: ${normalPrice:.2f})")
+        # กำหนดความกว้างคอลัมน์เองเพื่อให้ title ไม่ยาวเกินไป
+        print_table(["Title", "Savings (%)", "Sale Price ($)", "Normal Price ($)"], top_savings_deals, col_widths=[40, 12, 15, 15])
 
-        # 3: แสดงดีล 5 อันดับแรกที่มีคะแนน Metacritic สูงสุด
-        print("\n3. Top 5 deals with highest Metacritic Score:")
-        # กรองเฉพาะดีลที่มีคะแนน Metacritic
+
+        # ตัวอย่าง 3: แสดงดีล 5 อันดับแรกที่มีคะแนน Metacritic สูงสุด
+        print("3. Top 5 deals with highest Metacritic Score:")
         cursor.execute("SELECT title, metacriticScore, salePrice FROM deals WHERE metacriticScore IS NOT NULL ORDER BY metacriticScore DESC LIMIT 5")
         top_metacritic_deals = cursor.fetchall()
-        for i, (title, score, price) in enumerate(top_metacritic_deals):
-            print(f"   - Rank {i+1}: {title} - Metacritic: {score}, Price: ${price:.2f}")
+        print_table(["Title", "Metacritic Score", "Sale Price ($)"], top_metacritic_deals, col_widths=[40, 18, 15])
 
-        # 4: แสดงดีล 5 อันดับแรกที่มี Steam Rating Percent สูงสุด (และมีจำนวนรีวิวมากพอสมควร)
-        print("\n4. Top 5 deals with highest Steam Rating Percent (min 1000 reviews):")
-        # กรองเฉพาะดีลที่มี Steam Rating และมีจำนวนรีวิวอย่างน้อย 1000
+
+        # ตัวอย่าง 4: แสดงดีล 5 อันดับแรกที่มี Steam Rating Percent สูงสุด (และมีจำนวนรีวิวมากพอสมควร)
+        print("4. Top 5 deals with highest Steam Rating Percent (min 1000 reviews):")
         cursor.execute("SELECT title, steamRatingText, steamRatingPercent, steamRatingCount, salePrice FROM deals WHERE steamRatingPercent IS NOT NULL AND steamRatingCount >= 1000 ORDER BY steamRatingPercent DESC, steamRatingCount DESC LIMIT 5")
         top_steam_rating_deals = cursor.fetchall()
-        for i, (title, rating_text, percent, count, price) in enumerate(top_steam_rating_deals):
-             print(f"   - Rank {i+1}: {title} - Steam Rating: {rating_text} ({percent}%, {count} reviews), Price: ${price:.2f}")
+        print_table(["Title", "Steam Rating Text", "Steam Rating (%)", "Steam Reviews", "Sale Price ($)"], top_steam_rating_deals, col_widths=[40, 20, 18, 15, 15])
 
-        # 5: แสดงค่าเฉลี่ย Steam Rating Percent ของดีลทั้งหมด
+
+        # ตัวอย่าง 5: แสดงค่าเฉลี่ย Steam Rating Percent ของดีลทั้งหมด
+        print("5. Average Steam Rating Percent of all deals:")
         cursor.execute("SELECT AVG(steamRatingPercent) FROM deals WHERE steamRatingPercent IS NOT NULL")
-        avg_steam_rating = cursor.fetchone()[0]
-        if avg_steam_rating is not None:
-             print(f"\n5. Average Steam Rating Percent of all deals: {avg_steam_rating:.2f}%")
+        avg_steam_rating = cursor.fetchone()
+        if avg_steam_rating and avg_steam_rating[0] is not None:
+             print_table(["Average Steam Rating (%)"], [[f"{avg_steam_rating[0]:.2f}"]]) # จัดรูปแบบทศนิยมและใส่ใน List ของ List
         else:
-             print("\n5. No Steam Rating Percent data available for average calculation.")
+             print("   No Steam Rating Percent data available for average calculation.")
 
-        # 6: แสดงจำนวนดีลแยกตาม Steam Rating Text
-        print("\n6. Number of deals by Steam Rating Text:")
+
+        # ตัวอย่าง 6: แสดงจำนวนดีลแยกตาม Steam Rating Text
+        print("6. Number of deals by Steam Rating Text:")
         cursor.execute("SELECT steamRatingText, COUNT(*) FROM deals WHERE steamRatingText IS NOT NULL GROUP BY steamRatingText ORDER BY COUNT(*) DESC")
         rating_counts = cursor.fetchall()
-        for rating_text, count in rating_counts:
-            print(f"   - {rating_text}: {count}")
+        print_table(["Steam Rating Text", "Number of Deals"], rating_counts)
+
+
+        # --- ตัวอย่าง Query ยากๆ แสดงผลเป็นตาราง ---
+
+        # ตัวอย่าง 7: แสดงดีลที่มี Metacritic Score สูงกว่าค่าเฉลี่ย Metacritic Score ทั้งหมด
+        print("7. Deals with Metacritic Score above average:")
+        cursor.execute("""
+            SELECT title, metacriticScore, salePrice
+            FROM deals
+            WHERE metacriticScore IS NOT NULL
+              AND metacriticScore > (SELECT AVG(metacriticScore) FROM deals WHERE metacriticScore IS NOT NULL)
+            ORDER BY metacriticScore DESC
+            LIMIT 10;
+        """)
+        above_average_metacritic = cursor.fetchall()
+        print_table(["Title", "Metacritic Score", "Sale Price ($)"], above_average_metacritic, col_widths=[40, 18, 15])
+
+
+        # ตัวอย่าง 8: แสดงดีลที่มี Steam Rating Percent สูงกว่าค่าเฉลี่ย Steam Rating Percent ของดีลที่มี Steam Rating Text เดียวกัน
+        print("8. Deals with Steam Rating Percent above average for their rating text category:")
+        cursor.execute("""
+            WITH AvgRatings AS (
+                SELECT
+                    steamRatingText,
+                    AVG(steamRatingPercent) as avg_percent
+                FROM deals
+                WHERE steamRatingText IS NOT NULL
+                GROUP BY steamRatingText
+            )
+            SELECT
+                d.title,
+                d.steamRatingText,
+                d.steamRatingPercent,
+                ar.avg_percent
+            FROM deals d
+            JOIN AvgRatings ar ON d.steamRatingText = ar.steamRatingText
+            WHERE d.steamRatingPercent IS NOT NULL
+              AND d.steamRatingPercent > ar.avg_percent
+            ORDER BY d.steamRatingPercent DESC
+            LIMIT 10;
+        """)
+        above_average_steam_rating = cursor.fetchall()
+        # ปรับการแสดงผล avg_percent ให้มีทศนิยม
+        formatted_data = [(row[0], row[1], row[2], f"{row[3]:.2f}") for row in above_average_steam_rating]
+        print_table(["Title", "Steam Rating Text", "Steam Rating (%)", "Avg for Category (%)"], formatted_data, col_widths=[40, 20, 18, 20])
+
+
+        # ตัวอย่าง 9: แสดงดีลที่มี Metacritic Score สูง (>= 85) และมี Steam Rating Percent สูง (>= 90) และมีส่วนลด (savings) มากกว่า 70%
+        print("9. High-rated deals with significant savings:")
+        cursor.execute("""
+            SELECT title, metacriticScore, steamRatingPercent, savings, salePrice
+            FROM deals
+            WHERE metacriticScore IS NOT NULL AND metacriticScore >= 85
+              AND steamRatingPercent IS NOT NULL AND steamRatingPercent >= 90
+              AND savings IS NOT NULL AND savings >= 70
+            ORDER BY savings DESC, metacriticScore DESC
+            LIMIT 10;
+        """)
+        high_rated_deals = cursor.fetchall()
+        # ปรับการแสดงผล savings และ salePrice ให้มีทศนิยม
+        formatted_data = [(row[0], row[1], row[2], f"{row[3]:.2f}", f"{row[4]:.2f}") for row in high_rated_deals]
+        print_table(["Title", "Meta Score", "Steam (%)", "Savings (%)", "Sale Price ($)"], formatted_data, col_widths=[40, 12, 12, 12, 15])
+
+
+        # ตัวอย่าง 10: แสดงดีลที่มีจำนวนรีวิว Steam (steamRatingCount) อยู่ในช่วง Top 10%
+        print("10. Deals with Steam Rating Count in the top 10%:")
+        cursor.execute("""
+            SELECT MIN(steamRatingCount)
+            FROM (
+                SELECT steamRatingCount
+                FROM deals
+                WHERE steamRatingCount IS NOT NULL
+                ORDER BY steamRatingCount DESC
+                LIMIT (SELECT CAST(COUNT(*) * 0.1 AS INTEGER) FROM deals WHERE steamRatingCount IS NOT NULL)
+            ) AS Top10PercentCounts;
+        """)
+        min_count_for_top10 = cursor.fetchone()[0]
+
+        if min_count_for_top10 is not None:
+            print(f"   Minimum review count for top 10%: {min_count_for_top10}")
+            cursor.execute("""
+                SELECT title, steamRatingCount, steamRatingText, steamRatingPercent, salePrice
+                FROM deals
+                WHERE steamRatingCount IS NOT NULL
+                  AND steamRatingCount >= ?
+                ORDER BY steamRatingCount DESC
+                LIMIT 10;
+            """, (min_count_for_top10,))
+            top_review_count_deals = cursor.fetchall()
+            # ปรับการแสดงผล percent และ price
+            formatted_data = [(row[0], row[1], row[2], f"{row[3]:.2f}", f"{row[4]:.2f}") for row in top_review_count_deals]
+            print_table(["Title", "Reviews", "Steam Rating Text", "Steam Rating (%)", "Sale Price ($)"], formatted_data, col_widths=[40, 10, 20, 18, 15])
+        else:
+            print("   Not enough data to calculate top 10% review count.")
+
+
+        # ตัวอย่าง 11: แสดงดีลที่ออกก่อนปี 2015 และยังมีดีลอยู่
+        timestamp_2015 = 1420070400
+        print("11. Deals released before 2015:")
+        cursor.execute("""
+            SELECT title, releaseDate, salePrice
+            FROM deals
+            WHERE releaseDate IS NOT NULL
+              AND releaseDate < ?
+            ORDER BY releaseDate ASC
+            LIMIT 10;
+        """, (timestamp_2015,))
+        old_deals = cursor.fetchall()
+        if old_deals:
+            # แปลง timestamp เป็นวันที่ใน Python ก่อนแสดงผล
+            formatted_data = []
+            for title, release_ts, price in old_deals:
+                 release_date_str = datetime.datetime.fromtimestamp(release_ts).strftime('%d-%m-%Y')
+                 formatted_data.append((title, release_date_str, f"{price:.2f}"))
+            print_table(["Title", "Release Date", "Sale Price ($)"], formatted_data, col_widths=[40, 15, 15])
+        else:
+            print("   No deals found released before 2015.")
+
 
     except sqlite3.Error as e:
         print(f"Error during data analysis: {e}")
@@ -217,7 +402,6 @@ if __name__ == "__main__":
 
             # 4. Analyze Data
             if inserted_count > 0 or connection.execute("SELECT COUNT(*) FROM deals").fetchone()[0] > 0:
-                 # วิเคราะห์ถ้ามีการเพิ่มข้อมูลใหม่ หรือมีข้อมูลเดิมอยู่ในฐานข้อมูลแล้ว
                  analyze_deals_data(connection)
             else:
                  print("\nNo data available in the database for analysis.")
