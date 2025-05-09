@@ -57,7 +57,7 @@ def setup_database(db_name):
                 internalName TEXT,
                 title TEXT,
                 metacriticLink TEXT,
-                dealID TEXT UNIQUE, -- dealID น่าจะเป็นค่าที่ไม่ซ้ำกัน
+                dealID TEXT UNIQUE, -- dealID 
                 storeID INTEGER, -- แปลงเป็น INTEGER
                 gameID INTEGER, -- แปลงเป็น INTEGER
                 salePrice REAL, -- ราคาขาย (ทศนิยม)
@@ -220,13 +220,13 @@ def analyze_deals_data(conn):
     print("\n--- Data Analysis Results ---")
 
     try:
-        # ตัวอย่าง 1: นับจำนวนดีลทั้งหมด
+        # 1: นับจำนวนดีลทั้งหมด
         print("1. Total number of deals stored:")
         cursor.execute("SELECT COUNT(*) FROM deals")
         total_deals = cursor.fetchone() # fetchone() คืนค่าเป็น Tuple
         print_table(["Total Deals"], [total_deals]) # ใส่ผลลัพธ์ใน List ของ List/Tuple
 
-        # ตัวอย่าง 2: แสดงดีล 5 อันดับแรกที่มีส่วนลด (savings) สูงสุด
+        # 2: แสดงดีล 5 อันดับแรกที่มีส่วนลด (savings) สูงสุด
         print("2. Top 5 deals with highest savings:")
         cursor.execute("SELECT title, savings, salePrice, normalPrice FROM deals ORDER BY savings DESC LIMIT 5")
         top_savings_deals = cursor.fetchall()
@@ -234,21 +234,21 @@ def analyze_deals_data(conn):
         print_table(["Title", "Savings (%)", "Sale Price ($)", "Normal Price ($)"], top_savings_deals, col_widths=[40, 12, 15, 15])
 
 
-        # ตัวอย่าง 3: แสดงดีล 5 อันดับแรกที่มีคะแนน Metacritic สูงสุด
+        # 3: แสดงดีล 5 อันดับแรกที่มีคะแนน Metacritic สูงสุด
         print("3. Top 5 deals with highest Metacritic Score:")
         cursor.execute("SELECT title, metacriticScore, salePrice FROM deals WHERE metacriticScore IS NOT NULL ORDER BY metacriticScore DESC LIMIT 5")
         top_metacritic_deals = cursor.fetchall()
         print_table(["Title", "Metacritic Score", "Sale Price ($)"], top_metacritic_deals, col_widths=[40, 18, 15])
 
 
-        # ตัวอย่าง 4: แสดงดีล 5 อันดับแรกที่มี Steam Rating Percent สูงสุด (และมีจำนวนรีวิวมากพอสมควร)
+        # 4: แสดงดีล 5 อันดับแรกที่มี Steam Rating Percent สูงสุด (และมีจำนวนรีวิวมากพอสมควร)
         print("4. Top 5 deals with highest Steam Rating Percent (min 1000 reviews):")
         cursor.execute("SELECT title, steamRatingText, steamRatingPercent, steamRatingCount, salePrice FROM deals WHERE steamRatingPercent IS NOT NULL AND steamRatingCount >= 1000 ORDER BY steamRatingPercent DESC, steamRatingCount DESC LIMIT 5")
         top_steam_rating_deals = cursor.fetchall()
         print_table(["Title", "Steam Rating Text", "Steam Rating (%)", "Steam Reviews", "Sale Price ($)"], top_steam_rating_deals, col_widths=[40, 20, 18, 15, 15])
 
 
-        # ตัวอย่าง 5: แสดงค่าเฉลี่ย Steam Rating Percent ของดีลทั้งหมด
+        # 5: แสดงค่าเฉลี่ย Steam Rating Percent ของดีลทั้งหมด
         print("5. Average Steam Rating Percent of all deals:")
         cursor.execute("SELECT AVG(steamRatingPercent) FROM deals WHERE steamRatingPercent IS NOT NULL")
         avg_steam_rating = cursor.fetchone()
@@ -258,16 +258,14 @@ def analyze_deals_data(conn):
              print("   No Steam Rating Percent data available for average calculation.")
 
 
-        # ตัวอย่าง 6: แสดงจำนวนดีลแยกตาม Steam Rating Text
+        # 6: แสดงจำนวนดีลแยกตาม Steam Rating Text
         print("6. Number of deals by Steam Rating Text:")
         cursor.execute("SELECT steamRatingText, COUNT(*) FROM deals WHERE steamRatingText IS NOT NULL GROUP BY steamRatingText ORDER BY COUNT(*) DESC")
         rating_counts = cursor.fetchall()
         print_table(["Steam Rating Text", "Number of Deals"], rating_counts)
+        
 
-
-        # --- ตัวอย่าง Query ยากๆ แสดงผลเป็นตาราง ---
-
-        # ตัวอย่าง 7: แสดงดีลที่มี Metacritic Score สูงกว่าค่าเฉลี่ย Metacritic Score ทั้งหมด
+        # 7: แสดงดีลที่มี Metacritic Score สูงกว่าค่าเฉลี่ย Metacritic Score ทั้งหมด
         print("7. Deals with Metacritic Score above average:")
         cursor.execute("""
             SELECT title, metacriticScore, salePrice
@@ -281,7 +279,7 @@ def analyze_deals_data(conn):
         print_table(["Title", "Metacritic Score", "Sale Price ($)"], above_average_metacritic, col_widths=[40, 18, 15])
 
 
-        # ตัวอย่าง 8: แสดงดีลที่มี Steam Rating Percent สูงกว่าค่าเฉลี่ย Steam Rating Percent ของดีลที่มี Steam Rating Text เดียวกัน
+        # 8: แสดงดีลที่มี Steam Rating Percent สูงกว่าค่าเฉลี่ย Steam Rating Percent ของดีลที่มี Steam Rating Text เดียวกัน
         print("8. Deals with Steam Rating Percent above average for their rating text category:")
         cursor.execute("""
             WITH AvgRatings AS (
@@ -310,7 +308,7 @@ def analyze_deals_data(conn):
         print_table(["Title", "Steam Rating Text", "Steam Rating (%)", "Avg for Category (%)"], formatted_data, col_widths=[40, 20, 18, 20])
 
 
-        # ตัวอย่าง 9: แสดงดีลที่มี Metacritic Score สูง (>= 85) และมี Steam Rating Percent สูง (>= 90) และมีส่วนลด (savings) มากกว่า 70%
+        # 9: แสดงดีลที่มี Metacritic Score สูง (>= 85) และมี Steam Rating Percent สูง (>= 90) และมีส่วนลด (savings) มากกว่า 70%
         print("9. High-rated deals with significant savings:")
         cursor.execute("""
             SELECT title, metacriticScore, steamRatingPercent, savings, salePrice
@@ -327,7 +325,7 @@ def analyze_deals_data(conn):
         print_table(["Title", "Meta Score", "Steam (%)", "Savings (%)", "Sale Price ($)"], formatted_data, col_widths=[40, 12, 12, 12, 15])
 
 
-        # ตัวอย่าง 10: แสดงดีลที่มีจำนวนรีวิว Steam (steamRatingCount) อยู่ในช่วง Top 10%
+        # 10: แสดงดีลที่มีจำนวนรีวิว Steam (steamRatingCount) อยู่ในช่วง Top 10%
         print("10. Deals with Steam Rating Count in the top 10%:")
         cursor.execute("""
             SELECT MIN(steamRatingCount)
@@ -359,7 +357,7 @@ def analyze_deals_data(conn):
             print("   Not enough data to calculate top 10% review count.")
 
 
-        # ตัวอย่าง 11: แสดงดีลที่ออกก่อนปี 2015 และยังมีดีลอยู่
+        # 11: แสดงดีลที่ออกก่อนปี 2015 และยังมีดีลอยู่
         timestamp_2015 = 1420070400
         print("11. Deals released before 2015:")
         cursor.execute("""
