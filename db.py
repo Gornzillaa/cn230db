@@ -411,4 +411,4 @@ if __name__ == "__main__":
         connection.close()
         print("\nDatabase connection closed.")
     else:
-        print("Failed to initialize database. Exiting.")
+        print("Failed to initialize database. Exiting.") 
