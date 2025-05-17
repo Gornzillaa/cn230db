@@ -35,6 +35,8 @@
 
 *   **CheapShark API:** `https://www.cheapshark.com/api/1.0/deals?storeID=1&upperPrice=15`  
  - ใช้ Endpoint `/api/1.0/deals` เพื่อดึงข้อมูลดีลเกม
+*   **https://www.sqlite.org/**
+*   **https://www.sqlitetutorial.net/**
 
 ## 📊 ผลลัพธ์การวิเคราะห์ข้อมูล (Data Analysis Results)
 
