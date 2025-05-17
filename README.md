@@ -15,14 +15,14 @@ Database Explanation:
 
 ## Data Analysis  
 
- 1: นับจำนวนดีลทั้งหมด
- 2: แสดงดีล 5 อันดับแรกที่มีส่วนลด (savings) สูงสุด  
- 3: แสดงดีล 5 อันดับแรกที่มีคะแนน Metacritic สูงสุด  
- 4: แสดงดีล 5 อันดับแรกที่มี Steam Rating Percent สูงสุด (และมีจำนวนรีวิวมากพอสมควร)  
- 5: แสดงค่าเฉลี่ย Steam Rating Percent ของดีลทั้งหมด  
- 6: แสดงจำนวนดีลแยกตาม Steam Rating Text  
- 7: แสดงดีลที่มี Metacritic Score สูงกว่าค่าเฉลี่ย Metacritic Score ทั้งหมด  
- 8: แสดงดีลที่มี Steam Rating Percent สูงกว่าค่าเฉลี่ย Steam Rating Percent ของดีลที่มี Steam Rating Text เดียวกัน  
- 9: แสดงดีลที่มี Metacritic Score สูง (>= 85) และมี Steam Rating Percent สูง (>= 90) และมีส่วนลด (savings) มากกว่า 70%  
+ 1:  นับจำนวนดีลทั้งหมด
+ 2:  แสดงดีล 5 อันดับแรกที่มีส่วนลด (savings) สูงสุด  
+ 3:  แสดงดีล 5 อันดับแรกที่มีคะแนน Metacritic สูงสุด  
+ 4:  แสดงดีล 5 อันดับแรกที่มี Steam Rating Percent สูงสุด (และมีจำนวนรีวิวมากพอสมควร)  
+ 5:  แสดงค่าเฉลี่ย Steam Rating Percent ของดีลทั้งหมด  
+ 6:  แสดงจำนวนดีลแยกตาม Steam Rating Text  
+ 7:  แสดงดีลที่มี Metacritic Score สูงกว่าค่าเฉลี่ย Metacritic Score ทั้งหมด  
+ 8:  แสดงดีลที่มี Steam Rating Percent สูงกว่าค่าเฉลี่ย Steam Rating Percent ของดีลที่มี Steam Rating Text เดียวกัน  
+ 9:  แสดงดีลที่มี Metacritic Score สูง (>= 85) และมี Steam Rating Percent สูง (>= 90) และมีส่วนลด (savings) มากกว่า 70%  
  10: แสดงดีลที่มีจำนวนรีวิว Steam (steamRatingCount) อยู่ในช่วง Top 10%  
  11: แสดงดีลที่ออกก่อนปี 2015 และยังมีดีลอยู่  
